@@ -1,65 +1,1154 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiplayer Chat</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peer.min.js"></script>
+    <title>P2P Chat</title>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f0f2f5;
+        }
+
+        .chat-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            background: #36393f;
+            color: #dcddde;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #2f3136;
+            height: 100%;
+            color: #fff;
+            border-right: 1px solid #202225;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .connection-info {
+            padding: 20px;
+        }
+
+        .sound-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 5px;
+            background: #40444b;
+            border-radius: 5px;
+            color: #72767d;
+        }
+
+        .id-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .friends-list {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .chat-item span.id {
+            font-size: 0.8em;
+            opacity: 0.7;
+            color: #dcddde;
+        }
+
+        .chat-item:hover {
+            background: #40444b;
+        }
+
+        .connection-form {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #36393f;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 70%;
+        }
+
+        .message.received {
+            background: #40444b;
+            align-self: flex-start;
+        }
+
+        .message.sent {
+            background: #7289da;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: #40444b;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            padding: 10px;
+            background: #40444b;
+            border: 1px solid #202225;
+            color: #dcddde;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #7289da;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #677bc4;
+        }
+
+        .no-chat-selected {
+            display: flex;
+            flex: 1;
+            justify-content: center;
+            align-items: center;
+            color: #72767d;
+            font-size: 18px;
+        }
+
+        .emoji-picker {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #40444b;
+            border: 1px solid #202225;
+            border-radius: 5px;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 5px;
+            max-width: 300px;
+            display: none;
+        }
+
+        .emoji-btn {
+            cursor: pointer;
+            padding: 5px;
+            text-align: center;
+            user-select: none;
+            font-size: 20px;
+            color: white;
+        }
+
+        .emoji-btn:hover {
+            background: #36393f;
+            border-radius: 5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-account {
+            margin-top: 10px;
+            background: #f04747;
+            width: 100%;
+        }
+
+        .delete-account[data-clicks="1"] {
+            background: #eb3939;
+        }
+
+        .delete-account[data-clicks="2"] {
+            background: #d62929;
+        }
+
+        .chat-item button {
+            background: #7289da;
+        }
+
+        .chat-item button.active {
+            background: #72767d;
+            cursor: not-allowed;
+        }
+
+        .delete-chat {
+            margin-top: 5px;
+            background: #f04747;
+            width: 100%;
+            height: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .delete-chat[data-clicks="1"] {
+            background: #eb3939;
+        }
+
+        .delete-chat[data-clicks="2"] {
+            background: #d62929;
+        }
+
+        #copy-id.copied {
+            background: #43b581;
+        }
+
+        .message a:hover {
+            text-decoration: underline !important;
+        }
+
+        code {
+            display: inline-block;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 5px 0;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #2f3136;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .file-item .remove {
+            color: #f04747;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .file-item .remove:hover {
+            background: rgba(240, 71, 71, 0.1);
+        }
+
+        .file-size {
+            color: #72767d;
+            font-size: 0.9em;
+        }
+
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #40444b;
+            border: 1px solid #202225;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .dropdown-content button {
+            display: block;
+            width: 100%;
+            padding: 8px 16px;
+            text-align: left;
+            background: none;
+            border: none;
+            color: #dcddde;
+        }
+
+        .dropdown-content button:hover {
+            background: #36393f;
+        }
+
+        .dropdown.active .dropdown-content {
+            display: block;
+        }
+
+        .message a {
+            color: #00b0f4;
+            text-decoration: none;
+        }
+
+        .image-embed {
+            margin: 5px 0;
+            max-width: 300px;
+            background: #2f3136;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .image-embed img {
+            max-width: 100%;
+            display: block;
+        }
+
+        .chat-list {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .settings-button {
+            padding: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .settings-button svg {
+            width: 24px;
+            height: 24px;
+            fill: #72767d;
+        }
+
+        .settings-button:hover svg {
+            fill: #dcddde;
+        }
+
+        .settings-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #36393f;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            min-width: 300px;
+        }
+
+        .settings-popup.active {
+            display: block;
+        }
+
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .popup-overlay.active {
+            display: block;
+        }
+
+        .subdropdown {
+            position: absolute;
+            left: 100%;
+            top: 0;
+            background: #40444b;
+            border: 1px solid #202225;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .dropdown-content button:hover + .subdropdown,
+        .subdropdown:hover {
+            display: block;
+        }
+
+        .image-favorite-button {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 5px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .image-embed:hover .image-favorite-button {
+            display: block;
+        }
+
+        .image-favorite-button svg {
+            width: 16px;
+            height: 16px;
+            fill: #dcddde;
+        }
+
+        .image-favorite-button.active svg {
+            fill: #ffd700;
+        }
+
+        .favorites-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .favorites-list img {
+            max-width: 100px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-  <h1>Multiplayer Chat</h1>
-  <div>
-    <label for="peer-id">Your ID:</label>
-    <span id="your-id"></span>
-  </div>
-  <div>
-    <label for="connect-to-id">Connect to ID:</label>
-    <input type="text" id="connect-to-id">
-    <button onclick="connect()">Connect</button>
-  </div>
-  <textarea id="message-log" rows="10" cols="30" readonly></textarea>
-  <br>
-  <input type="text" id="message-input" placeholder="Type a message">
-  <button onclick="sendMessage()">Send</button>
+    <div class="chat-container">
+        <div class="sidebar">
+            <button class="settings-button" onclick="toggleSettings()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zM10 12a2 2 0 1 1 4 0 2 2 0 0 1-4 0z"/>
+                    <path d="M21.5 12c0-.157-.01-.313-.028-.466l2.122-2.12a.5.5 0 0 0 .108-.543l-2-4a.5.5 0 0 0-.503-.275l-2.94.42a7.468 7.468 0 0 0-.805-.466l-.84-2.835A.5.5 0 0 0 16.117 1h-4a.5.5 0 0 0-.478.346l-.84 2.835c-.28.128-.548.286-.805.466l-2.94-.42a.5.5 0 0 0-.503.275l-2 4a.5.5 0 0 0 .108.543l2.122 2.12c-.018.153-.028.309-.028.466 0 .157.01.313.028.466l-2.122 2.12a.5.5 0 0 0-.108.543l2 4a.5.5 0 0 0 .503.275l2.94-.42c.257.18.525.338.805.466l.84 2.835A.5.5 0 0 0 12.117 23h4a.5.5 0 0 0 .478-.346l.84-2.835c.28-.128.548-.286.805-.466l2.94.42a.5.5 0 0 0 .503-.275l2-4a.5.5 0 0 0-.108-.543l-2.122-2.12c.018-.153.028-.309.028-.466z"/>
+                </svg>
+            </button>
+            <div class="connection-form">
+                <input type="text" id="connect-id" placeholder="Enter ID to connect" />
+                <button id="connect-btn">Connect</button>
+            </div>
+            <div class="chat-list" id="chat-list"></div>
+        </div>
+        <div class="chat-section" id="chat-section">
+            <div class="no-chat-selected" id="no-chat">
+                Enter an ID and click connect to start chatting
+            </div>
+        </div>
+    </div>
 
-  <script>
-    const peer = new Peer();
-    let conn;
+    <div class="popup-overlay" id="settings-overlay">
+        <div class="settings-popup" id="settings-popup">
+            <input type="text" id="username" placeholder="Enter your username" />
+            <div class="id-container">
+                <p>Your ID: <span id="peer-id">Connecting...</span></p>
+                <button id="copy-id">Copy</button>
+            </div>
+            <div class="sound-toggle">
+                <input type="checkbox" id="sound-enabled" />
+                <label for="sound-enabled">Message Sounds</label>
+            </div>
+            <button class="delete-account" id="delete-account">Delete Account</button>
+            <button class="delete-chat" id="delete-chat">Delete Chat</button>
+        </div>
+    </div>
 
-    peer.on('open', id => {
-      document.getElementById('your-id').textContent = id;
-    });
+    <script>
+        let peer;
+        let connections = {};
+        let username = '';
+        let messageSound;
+        let currentChat = null;
 
-    peer.on('connection', connection => {
-      conn = connection;
-      conn.on('data', data => {
-        logMessage('Peer: ' + data);
-      });
-    });
+        function loadSavedData() {
+            const savedUsername = localStorage.getItem('username');
+            const savedPeerId = localStorage.getItem('peerId');
+            const savedChats = JSON.parse(localStorage.getItem('chats') || '{}');
+            const savedMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+            
+            if (savedUsername) {
+                document.getElementById('username').value = savedUsername;
+                username = savedUsername;
+            }
+            
+            Object.keys(savedChats).forEach(id => {
+                updateChatList(id, savedChats[id]);
+            });
+            
+            return { savedPeerId, savedMessages };
+        }
 
-    function connect() {
-      const peerId = document.getElementById('connect-to-id').value;
-      conn = peer.connect(peerId);
-      conn.on('open', () => {
-        logMessage('Connected to ' + peerId);
-        conn.on('data', data => {
-          logMessage('Peer: ' + data);
+        function saveChats() {
+            const chats = {};
+            Object.entries(connections).forEach(([id, conn]) => {
+                chats[id] = conn.peer;
+            });
+            localStorage.setItem('chats', JSON.stringify(chats));
+        }
+
+        function saveMessages(chatId, messages) {
+            const savedMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+            savedMessages[chatId] = messages;
+            localStorage.setItem('messages', JSON.stringify(savedMessages));
+        }
+
+        function updateChatList(id, peerUsername) {
+            const chatList = document.getElementById('chat-list');
+            const existingChat = document.getElementById(`chat-${id}`);
+            
+            if (!existingChat) {
+                const chatDiv = document.createElement('div');
+                chatDiv.id = `chat-${id}`;
+                chatDiv.className = 'chat-item';
+                chatDiv.innerHTML = `
+                    <div>
+                        <span>${peerUsername || 'Unknown User'}</span>
+                        <span class="id">(${id})</span>
+                    </div>
+                    <button onclick="openChat('${id}')">Chat</button>
+                `;
+                chatList.appendChild(chatDiv);
+            } else if (peerUsername) {
+                const nameSpan = existingChat.querySelector('span:not(.id)');
+                nameSpan.textContent = peerUsername;
+            }
+        }
+
+        function initializeAudio() {
+            const base64Sound = "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".replace(/\s/g, '+');
+            messageSound = new Audio('data:audio/mp3;base64,' + base64Sound);
+        }
+
+        function playMessageSound() {
+            if (document.getElementById('sound-enabled').checked) {
+                messageSound.play();
+            }
+        }
+
+        const emojis = [
+            '😊', '😂', '🤣', '❤️', '😍', '😒', '😘', '👍',
+            '😭', '😩', '😤', '🙄', '😴', '😷', '🤒', '🤮',
+            '🤡', '💩', '👻', '💀', '👽', '🤖', '🎃', '✨',
+            '🔥', '💯', '💪', '🙏', '👀', '🌟', '💖', '🎉'
+        ];
+
+        function createEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            emojis.forEach(emoji => {
+                const btn = document.createElement('div');
+                btn.className = 'emoji-btn';
+                btn.textContent = emoji;
+                btn.onclick = () => addEmoji(emoji);
+                picker.appendChild(btn);
+            });
+        }
+
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emoji-picker');
+            picker.style.display = picker.style.display === 'none' || picker.style.display === '' ? 'grid' : 'none';
+        }
+
+        function addEmoji(emoji) {
+            const messageInput = document.getElementById('message');
+            messageInput.value += emoji;
+            messageInput.focus();
+        }
+
+        function init() {
+            const { savedPeerId, savedMessages } = loadSavedData();
+            
+            peer = new Peer(savedPeerId);
+            
+            peer.on('open', (id) => {
+                document.getElementById('peer-id').textContent = id;
+                localStorage.setItem('peerId', id);
+            });
+
+            peer.on('connection', handleConnection);
+            
+            document.getElementById('username').addEventListener('change', (e) => {
+                username = e.target.value;
+                localStorage.setItem('username', username);
+            });
+
+            document.getElementById('connect-btn').addEventListener('click', connectToPeer);
+            
+            document.getElementById('copy-id').addEventListener('click', () => {
+                const copyBtn = document.getElementById('copy-id');
+                const peerId = document.getElementById('peer-id').textContent;
+                navigator.clipboard.writeText(peerId);
+                
+                copyBtn.textContent = 'Copied!';
+                copyBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.classList.remove('copied');
+                }, 1500);
+            });
+
+            document.getElementById('delete-account').addEventListener('click', handleDeleteAccount);
+            
+            document.getElementById('delete-chat').addEventListener('click', handleDeleteChat);
+            
+            initializeAudio();
+        }
+
+        function connectToPeer() {
+            const peerId = document.getElementById('connect-id').value.trim();
+            if (peerId && peerId !== peer.id) {
+                const conn = peer.connect(peerId, {
+                    reliable: true,
+                    serialization: 'json'
+                });
+                handleConnection(conn);
+                document.getElementById('connect-id').value = '';
+            }
+        }
+
+        function handleConnection(conn) {
+            conn.on('open', () => {
+                connections[conn.peer] = conn;
+                updateChatList(conn.peer);
+                saveChats();
+
+                // Send username to other peer
+                conn.send({
+                    type: 'username',
+                    username: username
+                });
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'message') {
+                    handleMessage(conn.peer, data.username, data.message);
+                } else if (data.type === 'username') {
+                    updateChatList(conn.peer, data.username);
+                } else if (data.type === 'account-deleted') {
+                    // Handle account deletion notification
+                    updateChatList(conn.peer, '[acc deleted]');
+                    const chatItem = document.getElementById(`chat-${conn.peer}`);
+                    if (chatItem) {
+                        const nameSpan = chatItem.querySelector('span:not(.id)');
+                        nameSpan.style.color = '#f04747';
+                    }
+                }
+            });
+
+            conn.on('close', () => {
+                // More aggressive reconnection
+                setTimeout(() => {
+                    if (connections[conn.peer]) {
+                        console.log('Attempting to reconnect to:', conn.peer);
+                        const newConn = peer.connect(conn.peer, {
+                            reliable: true,
+                            serialization: 'json'
+                        });
+                        handleConnection(newConn);
+                    }
+                }, 1000);
+            });
+
+            // Handle connection errors
+            conn.on('error', (err) => {
+                console.log('Connection error:', err);
+                setTimeout(() => {
+                    if (connections[conn.peer]) {
+                        console.log('Attempting to reconnect after error:', conn.peer);
+                        const newConn = peer.connect(conn.peer, {
+                            reliable: true,
+                            serialization: 'json'
+                        });
+                        handleConnection(newConn);
+                    }
+                }, 1000);
+            });
+        }
+
+        function openChat(friendId) {
+            if (currentChat && currentChat.id === friendId) return;
+
+            // Update button states
+            document.querySelectorAll('.chat-item button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const chatButton = document.querySelector(`#chat-${friendId} button`);
+            if (chatButton) chatButton.classList.add('active');
+
+            // Show delete chat button
+            const deleteChat = document.getElementById('delete-chat');
+            deleteChat.style.display = 'block';
+            deleteChat.setAttribute('data-clicks', '0');
+            deleteChat.textContent = 'Delete Chat';
+
+            currentChat = {
+                id: friendId,
+                username: friendId
+            };
+            
+            const chatSection = document.getElementById('chat-section');
+            chatSection.innerHTML = `
+                <div class="messages" id="messages"></div>
+                <div class="input-area">
+                    <div class="input-wrapper">
+                        <div class="dropdown">
+                            <button onclick="toggleDropdown(event)">+</button>
+                            <div class="dropdown-content">
+                                <button>Emoji</button>
+                                <button onclick="showImageOptions()">Image</button>
+                            </div>
+                        </div>
+                        <div class="emoji-picker" id="emoji-picker"></div>
+                        <input type="file" id="image-input" style="display: none;" accept="image/*" onchange="handleImage(event)" />
+                        <input type="text" id="message" placeholder="Message @${connections[friendId]?.metadata?.username || friendId}" />
+                    </div>
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            `;
+            
+            // Load saved messages
+            const messages = JSON.parse(localStorage.getItem('messages') || '{}');
+            if (messages[friendId]) {
+                messages[friendId].forEach(msg => {
+                    displayMessage(msg.username, msg.message, msg.sent);
+                });
+            }
+            
+            document.getElementById('message').addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            createEmojiPicker();
+        }
+
+        function toggleDropdown(event) {
+            event.stopPropagation();
+            const dropdown = event.target.parentElement;
+            dropdown.classList.toggle('active');
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!dropdown.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+        }
+
+        function openImageDialog() {
+            document.getElementById('image-input').click();
+        }
+
+        function handleImage(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (currentChat && connections[currentChat.id]) {
+                        connections[currentChat.id].send({
+                            type: 'message',
+                            id: peer.id,
+                            username: username,
+                            message: {
+                                type: 'image',
+                                data: e.target.result
+                            }
+                        });
+                        
+                        displayMessage(username, {
+                            type: 'image',
+                            data: e.target.result
+                        }, true);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = '';
+        }
+
+        function sendMessage() {
+            if (!currentChat) return;
+            
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value.trim();
+            
+            if (message && connections[currentChat.id]) {
+                connections[currentChat.id].send({
+                    type: 'message',
+                    id: peer.id,
+                    username: username,
+                    message: message
+                });
+                
+                displayMessage(username, message, true);
+                
+                const messages = JSON.parse(localStorage.getItem('messages') || '{}');
+                if (!messages[currentChat.id]) messages[currentChat.id] = [];
+                
+                messages[currentChat.id].push({
+                    username: username,
+                    message: message,
+                    sent: true
+                });
+                
+                saveMessages(currentChat.id, messages[currentChat.id]);
+            }
+            
+            messageInput.value = '';
+        }
+
+        function handleMessage(senderId, senderUsername, message) {
+            if (!currentChat || currentChat.id !== senderId) {
+                playMessageSound();
+            }
+            
+            const messages = JSON.parse(localStorage.getItem('messages') || '{}');
+            if (!messages[senderId]) messages[senderId] = [];
+            
+            messages[senderId].push({
+                username: senderUsername,
+                message: message,
+                sent: false
+            });
+            
+            saveMessages(senderId, messages[senderId]);
+            
+            if (currentChat && currentChat.id === senderId) {
+                displayMessage(senderUsername, message, false);
+            }
+        }
+
+        function displayMessage(username, message, isSent) {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+            
+            if (typeof message === 'object' && message.type === 'image') {
+                messageElement.innerHTML = `
+                    ${username}: 
+                    <div class="image-embed">
+                        <div class="image-favorite-button" onclick="this.classList.toggle('active', toggleFavorite('${message.data}'))">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                            </svg>
+                        </div>
+                        <img src="${message.data}" alt="Sent image">
+                    </div>`;
+            } else {
+                // Format the message with special syntax and links
+                let formattedMessage = message;
+                
+                // Check if the message is code block
+                if (formattedMessage.startsWith("'''") && formattedMessage.endsWith("'''")) {
+                    formattedMessage = formattedMessage.slice(3, -3);
+                    messageElement.innerHTML = `${username}: <code style="background: #2f3136; padding: 2px 6px; border-radius: 3px; font-family: monospace;">${formattedMessage}</code>`;
+                } else {
+                    // Handle links first to prevent interference with other formatting
+                    formattedMessage = formattedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+                    
+                    // Then handle other formatting
+                    formattedMessage = formattedMessage
+                        .replace(/(?<!https?:)\/\/(.*?)\/\//g, '<i>$1</i>') // Exclude https:// from italic formatting
+                        .replace(/\\\\\s*(.*?)\s*\\\\/g, '<i style="transform: skew(20deg);">$1</i>')
+                        .replace(/__(.*?)__/g, '<u>$1</u>')
+                        .replace(/\^\^(.*?)\^\^/g, '<strong>$1</strong>');
+
+                    messageElement.innerHTML = `${username}: ${formattedMessage}`;
+                }
+            }
+            
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            if (!isSent) {
+                playMessageSound();
+            }
+
+            // Save message to local storage
+            const messages = JSON.parse(localStorage.getItem('messages') || '{}');
+            if (!messages[currentChat.id]) messages[currentChat.id] = [];
+            messages[currentChat.id].push({
+                username: username,
+                message: message,
+                sent: isSent
+            });
+            saveMessages(currentChat.id, messages[currentChat.id]);
+        }
+
+        function handleDeleteAccount() {
+            const deleteBtn = document.getElementById('delete-account');
+            const deleteClicks = parseInt(deleteBtn.getAttribute('data-clicks') || '0');
+            
+            const messages = ['Are you sure?', 'Are you really sure?', 'Are you super-duper ooper really sure?'];
+            
+            if (deleteClicks < 3) {
+                deleteBtn.textContent = messages[deleteClicks];
+                deleteBtn.setAttribute('data-clicks', (deleteClicks + 1).toString());
+                
+                // Reset after 1 second
+                setTimeout(() => {
+                    deleteBtn.setAttribute('data-clicks', '0');
+                    deleteBtn.textContent = 'Delete Account';
+                }, 1000);
+                
+                if (deleteClicks === 2) {
+                    const verificationCode = Math.floor(Math.random() * 90000) + 10000;
+                    const userInput = prompt(`Type ${verificationCode} to delete your account:`);
+                    
+                    if (userInput === verificationCode.toString()) {
+                        // Notify all connections of account deletion
+                        Object.values(connections).forEach(conn => {
+                            conn.send({
+                                type: 'account-deleted',
+                                id: peer.id
+                            });
+                            // Update local display
+                            updateChatList(conn.peer, '[acc deleted]');
+                            const chatItem = document.getElementById(`chat-${conn.peer}`);
+                            if (chatItem) {
+                                const nameSpan = chatItem.querySelector('span:not(.id)');
+                                nameSpan.style.color = '#f04747';
+                            }
+                        });
+                        
+                        // Clear local storage
+                        localStorage.clear();
+                        
+                        // Create new peer
+                        peer.destroy();
+                        peer = new Peer();
+                        
+                        // Reset UI
+                        document.getElementById('username').value = '';
+                        document.getElementById('chat-list').innerHTML = '';
+                        connections = {};
+                        username = '';
+                        
+                        // Reset delete button
+                        deleteBtn.setAttribute('data-clicks', '0');
+                    }
+                    deleteBtn.setAttribute('data-clicks', '0');
+                    deleteBtn.textContent = 'Delete Account';
+                }
+            }
+        }
+
+        function handleDeleteChat() {
+            if (!currentChat) return;
+            
+            const deleteBtn = document.getElementById('delete-chat');
+            const deleteClicks = parseInt(deleteBtn.getAttribute('data-clicks') || '0');
+            
+            const messages = ['Are you sure?', 'Are you really sure?'];
+            
+            if (deleteClicks < 2) {
+                deleteBtn.textContent = messages[deleteClicks];
+                deleteBtn.setAttribute('data-clicks', (deleteClicks + 1).toString());
+                
+                // Reset after 1 second
+                setTimeout(() => {
+                    deleteBtn.setAttribute('data-clicks', '0');
+                    deleteBtn.textContent = 'Delete Chat';
+                }, 1000);
+            }
+            
+            if (deleteClicks === 1) {
+                // Remove chat from connections
+                delete connections[currentChat.id];
+                
+                // Remove chat from storage
+                const savedChats = JSON.parse(localStorage.getItem('chats') || '{}');
+                delete savedChats[currentChat.id];
+                localStorage.setItem('chats', JSON.stringify(savedChats));
+                
+                const savedMessages = JSON.parse(localStorage.getItem('messages') || '{}');
+                delete savedMessages[currentChat.id];
+                localStorage.setItem('messages', JSON.stringify(savedMessages));
+                
+                // Remove chat from UI
+                const chatElement = document.getElementById(`chat-${currentChat.id}`);
+                if (chatElement) chatElement.remove();
+                
+                // Reset chat section
+                document.getElementById('chat-section').innerHTML = `
+                    <div class="no-chat-selected" id="no-chat">
+                        Enter an ID and click connect to start chatting
+                    </div>
+                `;
+                
+                // Hide delete chat button
+                deleteBtn.style.display = 'none';
+                deleteBtn.setAttribute('data-clicks', '0');
+                currentChat = null;
+                
+                // Reset all chat buttons
+                document.querySelectorAll('.chat-item button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+        }
+
+        function toggleSettings() {
+            document.getElementById('settings-overlay').classList.toggle('active');
+            document.getElementById('settings-popup').classList.toggle('active');
+        }
+
+        // Close settings when clicking outside
+        document.getElementById('settings-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('settings-overlay')) {
+                toggleSettings();
+            }
         });
-      });
-    }
 
-    function sendMessage() {
-      const message = document.getElementById('message-input').value;
-      logMessage('You: ' + message);
-      conn.send(message);
-      document.getElementById('message-input').value = '';
-    }
+        function showImageOptions() {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#36393f;padding:20px;border-radius:8px;z-index:1001;';
+            
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+            
+            const fileButton = document.createElement('button');
+            fileButton.textContent = 'File';
+            fileButton.onclick = () => {
+                openImageDialog();
+                document.body.removeChild(modal);
+                document.body.removeChild(overlay);
+            };
+            
+            const linkButton = document.createElement('button');
+            linkButton.textContent = 'Link';
+            linkButton.onclick = () => {
+                promptImageURL();
+                document.body.removeChild(modal);
+                document.body.removeChild(overlay);
+            };
+            
+            const favoritesButton = document.createElement('button');
+            favoritesButton.textContent = 'Favorites';
+            favoritesButton.onclick = () => {
+                showFavorites();
+                document.body.removeChild(modal);
+                document.body.removeChild(overlay);
+            };
+            
+            buttonContainer.appendChild(fileButton);
+            buttonContainer.appendChild(linkButton);
+            buttonContainer.appendChild(favoritesButton);
+            modal.appendChild(buttonContainer);
+            
+            document.body.appendChild(modal);
+            
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;';
+            overlay.onclick = () => {
+                document.body.removeChild(modal);
+                document.body.removeChild(overlay);
+            };
+            document.body.appendChild(overlay);
+        }
 
-    function logMessage(message) {
-      const messageLog = document.getElementById('message-log');
-      messageLog.value += message + '\n';
-      messageLog.scrollTop = messageLog.scrollHeight;
-    }
-  </script>
+        function promptImageURL() {
+            const url = prompt('Enter image URL:');
+            if (url) {
+                displayMessage(username, {
+                    type: 'image',
+                    data: url
+                }, true);
+                
+                if (currentChat && connections[currentChat.id]) {
+                    connections[currentChat.id].send({
+                        type: 'message',
+                        username: username,
+                        message: {
+                            type: 'image',
+                            data: url
+                        }
+                    });
+                }
+            }
+        }
+
+        function showFavorites() {
+            const favorites = JSON.parse(localStorage.getItem('favoriteImages') || '[]');
+            const container = document.createElement('div');
+            container.className = 'favorites-list';
+            favorites.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.onclick = () => {
+                    displayMessage(username, {
+                        type: 'image',
+                        data: url
+                    }, true);
+                    
+                    if (currentChat && connections[currentChat.id]) {
+                        connections[currentChat.id].send({
+                            type: 'message',
+                            username: username,
+                            message: {
+                                type: 'image',
+                                data: url
+                            }
+                        });
+                    }
+                };
+                container.appendChild(img);
+            });
+            
+            // Show in a modal
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#36393f;padding:20px;border-radius:8px;z-index:1001;';
+            modal.appendChild(container);
+            document.body.appendChild(modal);
+            
+            // Close when clicking outside
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;';
+            overlay.onclick = () => {
+                document.body.removeChild(modal);
+                document.body.removeChild(overlay);
+            };
+            document.body.appendChild(overlay);
+        }
+
+        function toggleFavorite(url) {
+            const favorites = JSON.parse(localStorage.getItem('favoriteImages') || '[]');
+            const index = favorites.indexOf(url);
+            
+            if (index === -1) {
+                favorites.push(url);
+            } else {
+                favorites.splice(index, 1);
+            }
+            
+            localStorage.setItem('favoriteImages', JSON.stringify(favorites));
+            return index === -1;
+        }
+
+        init();
+    </script>
 </body>
 </html>
