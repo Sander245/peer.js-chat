@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Chat</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.4.7/peer.min.js"></script>
+</head>
+<body>
+  <h1>Multiplayer Chat</h1>
+  <div>
+    <label for="peer-id">Your ID:</label>
+    <span id="your-id"></span>
+  </div>
+  <div>
+    <label for="connect-to-id">Connect to ID:</label>
+    <input type="text" id="connect-to-id">
+    <button onclick="connect()">Connect</button>
+  </div>
+  <textarea id="message-log" rows="10" cols="30" readonly></textarea>
+  <br>
+  <input type="text" id="message-input" placeholder="Type a message">
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    const peer = new Peer();
+    let conn;
+
+    peer.on('open', id => {
+      document.getElementById('your-id').textContent = id;
+    });
+
+    peer.on('connection', connection => {
+      conn = connection;
+      conn.on('data', data => {
+        logMessage('Peer: ' + data);
+      });
+    });
+
+    function connect() {
+      const peerId = document.getElementById('connect-to-id').value;
+      conn = peer.connect(peerId);
+      conn.on('open', () => {
+        logMessage('Connected to ' + peerId);
+        conn.on('data', data => {
+          logMessage('Peer: ' + data);
+        });
+      });
+    }
+
+    function sendMessage() {
+      const message = document.getElementById('message-input').value;
+      logMessage('You: ' + message);
+      conn.send(message);
+      document.getElementById('message-input').value = '';
+    }
+
+    function logMessage(message) {
+      const messageLog = document.getElementById('message-log');
+      messageLog.value += message + '\n';
+      messageLog.scrollTop = messageLog.scrollHeight;
+    }
+  </script>
+</body>
+</html>
