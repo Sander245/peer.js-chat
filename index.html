@@ -320,6 +320,7 @@
             background: #2f3136;
             border-radius: 4px;
             overflow: hidden;
+            position: relative;
         }
 
         .image-embed img {
@@ -334,6 +335,7 @@
         }
 
         .settings-button {
+            width: fit-content;
             padding: 10px;
             background: none;
             border: none;
@@ -433,6 +435,7 @@
             max-width: 100px;
             margin: 5px;
             cursor: pointer;
+            position: relative;
         }
     </style>
 </head>
@@ -544,35 +547,6 @@
             if (document.getElementById('sound-enabled').checked) {
                 messageSound.play();
             }
-        }
-
-        const emojis = [
-            '😊', '😂', '🤣', '❤️', '😍', '😒', '😘', '👍',
-            '😭', '😩', '😤', '🙄', '😴', '😷', '🤒', '🤮',
-            '🤡', '💩', '👻', '💀', '👽', '🤖', '🎃', '✨',
-            '🔥', '💯', '💪', '🙏', '👀', '🌟', '💖', '🎉'
-        ];
-
-        function createEmojiPicker() {
-            const picker = document.getElementById('emoji-picker');
-            emojis.forEach(emoji => {
-                const btn = document.createElement('div');
-                btn.className = 'emoji-btn';
-                btn.textContent = emoji;
-                btn.onclick = () => addEmoji(emoji);
-                picker.appendChild(btn);
-            });
-        }
-
-        function toggleEmojiPicker() {
-            const picker = document.getElementById('emoji-picker');
-            picker.style.display = picker.style.display === 'none' || picker.style.display === '' ? 'grid' : 'none';
-        }
-
-        function addEmoji(emoji) {
-            const messageInput = document.getElementById('message');
-            messageInput.value += emoji;
-            messageInput.focus();
         }
 
         function init() {
@@ -741,6 +715,35 @@
                 }
             });
             
+            const emojis = [
+                '😊', '😂', '🤣', '❤️', '😍', '😒', '😘', '👍',
+                '😭', '😩', '😤', '🙄', '😴', '😷', '🤒', '🤮',
+                '🤡', '💩', '👻', '💀', '👽', '🤖', '🎃', '✨',
+                '🔥', '💯', '💪', '🙏', '👀', '🌟', '💖', '🎉'
+            ];
+
+            function createEmojiPicker() {
+                const picker = document.getElementById('emoji-picker');
+                emojis.forEach(emoji => {
+                    const btn = document.createElement('div');
+                    btn.className = 'emoji-btn';
+                    btn.textContent = emoji;
+                    btn.onclick = () => addEmoji(emoji);
+                    picker.appendChild(btn);
+                });
+            }
+
+            function toggleEmojiPicker() {
+                const picker = document.getElementById('emoji-picker');
+                picker.style.display = picker.style.display === 'none' || picker.style.display === '' ? 'grid' : 'none';
+            }
+
+            function addEmoji(emoji) {
+                const messageInput = document.getElementById('message');
+                messageInput.value += emoji;
+                messageInput.focus();
+            }
+
             createEmojiPicker();
         }
 
@@ -1095,9 +1098,51 @@
             const favorites = JSON.parse(localStorage.getItem('favoriteImages') || '[]');
             const container = document.createElement('div');
             container.className = 'favorites-list';
+
+            // Add checkbox for showing/hiding X buttons
+            const checkboxWrapper = document.createElement('div');
+            checkboxWrapper.style.cssText = 'margin-bottom: 10px;';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = 'show-delete-buttons';
+            const label = document.createElement('label');
+            label.htmlFor = 'show-delete-buttons';
+            label.textContent = 'Show delete buttons';
+            checkboxWrapper.appendChild(checkbox);
+            checkboxWrapper.appendChild(label);
+
+            container.appendChild(checkboxWrapper);
+
             favorites.forEach(url => {
+                const wrapper = document.createElement('div');
+                wrapper.style.position = 'relative';
+                wrapper.style.display = 'inline-block';
+
                 const img = document.createElement('img');
                 img.src = url;
+                
+                const removeButton = document.createElement('div');
+                removeButton.className = 'image-favorite-button';
+                removeButton.style.display = 'none'; // Initially hidden
+                removeButton.innerHTML = `
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                `;
+                removeButton.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(url);
+                    wrapper.remove();
+                };
+
+                // Show/hide X buttons based on checkbox
+                checkbox.onchange = (e) => {
+                    const buttons = container.querySelectorAll('.image-favorite-button');
+                    buttons.forEach(btn => {
+                        btn.style.display = e.target.checked ? 'block' : 'none';
+                    });
+                };
+
                 img.onclick = () => {
                     displayMessage(username, {
                         type: 'image',
@@ -1115,16 +1160,17 @@
                         });
                     }
                 };
-                container.appendChild(img);
+
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeButton);
+                container.appendChild(wrapper);
             });
             
-            // Show in a modal
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#36393f;padding:20px;border-radius:8px;z-index:1001;';
             modal.appendChild(container);
             document.body.appendChild(modal);
             
-            // Close when clicking outside
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;';
             overlay.onclick = () => {
